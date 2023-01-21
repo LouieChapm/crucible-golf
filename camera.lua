@@ -90,6 +90,10 @@ function Camera:update()
     end
     ]]--
 
+    spinny.rotation[1]=t
+    spinny.rotation[2]=t
+    spinny.rotation[3]=t
+
     if love.keyboard.isDown("space") then
         cam.position[2]=cam.position[2]+speed
     end
