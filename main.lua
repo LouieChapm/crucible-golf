@@ -50,7 +50,7 @@ function love.update(dt)
 end
 
 function love.draw()
-    love.graphics.setCanvas(canvas)
+    love.graphics.setCanvas( { canvas, stencil = true } )
     love.graphics.clear(pal(BACKGROUND_COL))
     love.graphics.translate(0, 0)
 

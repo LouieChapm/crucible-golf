@@ -10,8 +10,6 @@ palette = {
 	{0, 1, 2, 3, 2, 5, 6, 7, 8, 4, 9, 11, 12, 13, 14, 9},
 	{0, 1, 1, 3, 2, 1, 13, 6, 2, 3, 4, 3, 13, 5, 4, 4},
 	{0, 0, 1, 1, 1, 1, 5, 13, 2, 2, 2, 3, 5, 1, 2, 2},
-	{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-	{0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
 }
 
 function Camera:init()
@@ -23,7 +21,7 @@ function Camera:init()
     love.mouse.setPosition(SCREEN_WIDTH*0.5,SCREEN_HEIGHT*0.5) -- set cursor to center of screen
 
     objects={}
-    light={0,3,0}
+    light={0,10,10}
     cam={
         position={0,0,-5},
         dir={0,0,0},
@@ -35,8 +33,8 @@ function Camera:init()
 
     mult=CANVAS_WIDTH/2
 
-    for i=0,500 do
-        table.insert(objects,self:create_object(cube,{lm.random(50)-25,lm.random(50)-25,lm.random(50)-25}))
+    for i=0,30 do
+        table.insert(objects,self:create_object(tube,{0,-30+i*2,0},{1,1,1}))
     end
 
     --[[
@@ -46,10 +44,7 @@ function Camera:init()
     table.insert(objects,self:create_object(cube,{-10,7,2}))
     table.insert(objects,self:create_object(cube,{10,10,5}))
     table.insert(objects,self:create_object(cube,{0,10,10}))
-    ]]--
-
-    bouncy=objects[1]
-    spinny=objects[3]
+    ]]--    
 end
 
 function Camera:update()
@@ -71,28 +66,6 @@ function Camera:update()
     end
     self:move_camera(move_dir)
 
-
-
-
-    --[[
-    if love.keyboard.isDown("w") then
-        cam.position[3]=cam.position[3]+speed
-    end
-    if love.keyboard.isDown("s") then
-        cam.position[3]=cam.position[3]-speed
-    end
-
-    if love.keyboard.isDown("a") then
-        cam.position[1]=cam.position[1]+speed
-    end
-    if love.keyboard.isDown("d") then
-        cam.position[1]=cam.position[1]-speed
-    end
-    ]]--
-
-    spinny.rotation[1]=t
-    spinny.rotation[2]=t
-    spinny.rotation[3]=t
 
     if love.keyboard.isDown("space") then
         cam.position[2]=cam.position[2]+speed
@@ -141,10 +114,30 @@ function Camera:draw()
                 local x2,y2=self:project(t2)
                 local x3,y3=self:project(t3)
 
-                local c = self:calculate_light(nt, light, 7)
+                local c=7
+                local dark_level,a = self:calculate_light(nt, light, c)
+                a=(#palette-1)*a
 
-                lg.setColour(pal(c))
+                -- depth shading
+                if obj.position[2] < 4 then fillp(0) end
+                if obj.position[2] < 2 then fillp(1) end
+                if obj.position[2] < -0 then fillp(2) end
+                if obj.position[2] < -4 then fillp(3) end
+                if obj.position[2] < -8 then fillp(4) end
+
+                lg.setColour(pal(palette[dark_level][c+1]))
                 lg.polygon("fill",x1,y1,x2,y2,x3,y3)
+
+
+                if a%1<0.5 and dark_level<#palette then 
+                    fillp(1) 
+
+                    lg.setColour(pal(palette[dark_level+1][c+1]))
+                    lg.polygon("fill",x1,y1,x2,y2,x3,y3)
+                end
+
+
+                fillp()
             end
 		end
 
@@ -300,7 +293,8 @@ function Camera:calculate_light(t, l, c)
 	angle = math.abs(angle)
 
 
-    return palette[#palette - math.floor((#palette-1)*angle)][c+1]
+    --return palette[#palette - math.floor((#palette-1)*angle)][c+1],angle
+    return #palette - math.floor((#palette-1)*angle),angle
 end
 
 
