@@ -119,7 +119,7 @@ function Camera:draw()
                 a=(#palette-1)*a
 
                 -- depth shading
-                if obj.position[2] < 4 then fillp(0) end
+                if obj.position[2] < 8 then fillp(0) end
                 if obj.position[2] < 2 then fillp(1) end
                 if obj.position[2] < -0 then fillp(2) end
                 if obj.position[2] < -4 then fillp(3) end
