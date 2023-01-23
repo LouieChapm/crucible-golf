@@ -13,7 +13,7 @@ palette = {
 }
 
 function Camera:init()
-    cursor_lock=lock
+    cursor_lock=true
     love.mouse.setVisible(not cursor_lock)
 
     mouse_x_sensitivity=1
@@ -26,7 +26,7 @@ function Camera:init()
         position={0,20,0},
         dir={0,0,0},
 
-        pitch=0.7,
+        pitch=0.5,
         yaw=0,
     }
     move_speed=0.2
@@ -39,8 +39,8 @@ function Camera:update()
         self:camera_control()
     else
         local dist=30
-        cam.position[1]=sin(t)*dist
-        cam.position[3]=cos(t)*dist
+        cam.position[1]=sin(t*0.5)*dist
+        cam.position[3]=cos(t*0.5)*dist
         cam.yaw=-sin(t)
     end 
 
