@@ -13,41 +13,104 @@ palette = {
 }
 
 function Camera:init()
-    cursor_lock=true
+    cursor_lock=lock
     love.mouse.setVisible(not cursor_lock)
 
     mouse_x_sensitivity=1
     mouse_y_sensitivity=1
     love.mouse.setPosition(SCREEN_WIDTH*0.5,SCREEN_HEIGHT*0.5) -- set cursor to center of screen
 
-    objects={}
+    OBJECTS={}
     light={0,10,10}
     cam={
-        position={0,0,-5},
+        position={0,20,0},
         dir={0,0,0},
 
-        pitch=0,
+        pitch=0.7,
         yaw=0,
     }
     move_speed=0.2
 
     mult=CANVAS_WIDTH/2
-
-    for i=0,30 do
-        table.insert(objects,self:create_object(tube,{0,-30+i*2,0},{1,1,1}))
-    end
-
-    --[[
-    table.insert(objects,self:create_object(cube,{0,0,0}))
-    table.insert(objects,self:create_object(cube,{5,0,-5}))
-    table.insert(objects,self:create_object(cube,{0,5,5},{2,2,2}))
-    table.insert(objects,self:create_object(cube,{-10,7,2}))
-    table.insert(objects,self:create_object(cube,{10,10,5}))
-    table.insert(objects,self:create_object(cube,{0,10,10}))
-    ]]--    
 end
 
 function Camera:update()
+    if cursor_lock then 
+        self:camera_control()
+    else
+        local dist=30
+        cam.position[1]=sin(t)*dist
+        cam.position[3]=cos(t)*dist
+        cam.yaw=-sin(t)
+    end 
+
+    
+
+    self:update_engine()
+end
+
+function love.keypressed(key)
+    if key == "tab" then
+       cursor_lock = not cursor_lock
+       love.mouse.setVisible(not cursor_lock)
+    end
+ end
+
+function Camera:draw()
+    for _,obj in ipairs(OBJECTS) do
+        for _,tri in ipairs(obj.render_triangles) do
+			-- create new triangles at offset
+
+			local nt = {}
+			nt[1] = add_vec(tri[1], obj.position)
+			nt[2] = add_vec(tri[2], obj.position)
+			nt[3] = add_vec(tri[3], obj.position)
+
+            local t1,t2,t3=self:multiply_view_matrix(nt[1]),self:multiply_view_matrix(nt[2]),self:multiply_view_matrix(nt[3])
+
+            if t1[3] > 0.1 and t2[3] > 0.1 and t3[3] > 0.1 then
+                local x1,y1=self:project(t1)
+                local x2,y2=self:project(t2)
+                local x3,y3=self:project(t3)
+
+                -- backface culling
+                if self:shoelace_culling(x1,y1,x2,y2,x3,y3)<=0 then
+
+                    local c=7
+                    local dark_level,a = self:calculate_light(nt, light, c)
+                    a=(#palette-1)*a
+
+                    -- depth shading
+                    if obj.position[2] < -30 then fillp(0) end
+                    if obj.position[2] < -40 then fillp(1) end
+                    if obj.position[2] < -48 then fillp(2) end
+                    if obj.position[2] < -54 then fillp(3) end
+                    if obj.position[2] < -60 then fillp(4) end
+
+                    lg.setColour(pal(palette[dark_level][c+1]))
+                    lg.polygon("fill",x1,y1,x2,y2,x3,y3)
+
+
+                    if a%1<0.5 and dark_level<#palette then 
+                        fillp(1) 
+
+                        lg.setColour(pal(palette[dark_level+1][c+1]))
+                        lg.polygon("fill",x1,y1,x2,y2,x3,y3)
+                    end
+
+
+                    fillp()
+                end
+            end
+		end
+    end
+end
+
+
+-- functions --
+
+-- allows the player to control the camera using wasd
+function Camera:camera_control()
     local speed=0.2
 
     local move_dir={0,0,0}
@@ -67,10 +130,10 @@ function Camera:update()
     self:move_camera(move_dir)
 
 
-    if love.keyboard.isDown("space") then
+    if love.keyboard.isDown("space") and cursor_lock then
         cam.position[2]=cam.position[2]+speed
     end
-    if love.keyboard.isDown("lshift") then
+    if love.keyboard.isDown("lshift") and cursor_lock then
         cam.position[2]=cam.position[2]-speed
     end
 
@@ -85,69 +148,9 @@ function Camera:update()
 
         love.mouse.setPosition(setX,setY)
     end
-
-    self:update_engine()
 end
 
-function love.keypressed(key)
-    if key == "tab" then
-       cursor_lock = not cursor_lock
-       love.mouse.setVisible(not cursor_lock)
-    end
- end
-
-function Camera:draw()
-    for _,obj in ipairs(objects) do
-        for _,tri in ipairs(obj.render_triangles) do
-			-- create new triangles at offset
-
-
-			local nt = {}
-			nt[1] = add_vec(tri[1], obj.position)
-			nt[2] = add_vec(tri[2], obj.position)
-			nt[3] = add_vec(tri[3], obj.position)
-
-            local t1,t2,t3=self:multiply_view_matrix(nt[1]),self:multiply_view_matrix(nt[2]),self:multiply_view_matrix(nt[3])
-
-            if t1[3] > 0.1 and t2[3] > 0.1 and t3[3] > 0.1 then
-                local x1,y1=self:project(t1)
-                local x2,y2=self:project(t2)
-                local x3,y3=self:project(t3)
-
-                local c=7
-                local dark_level,a = self:calculate_light(nt, light, c)
-                a=(#palette-1)*a
-
-                -- depth shading
-                if obj.position[2] < 8 then fillp(0) end
-                if obj.position[2] < 2 then fillp(1) end
-                if obj.position[2] < -0 then fillp(2) end
-                if obj.position[2] < -4 then fillp(3) end
-                if obj.position[2] < -8 then fillp(4) end
-
-                lg.setColour(pal(palette[dark_level][c+1]))
-                lg.polygon("fill",x1,y1,x2,y2,x3,y3)
-
-
-                if a%1<0.5 and dark_level<#palette then 
-                    fillp(1) 
-
-                    lg.setColour(pal(palette[dark_level+1][c+1]))
-                    lg.polygon("fill",x1,y1,x2,y2,x3,y3)
-                end
-
-
-                fillp()
-            end
-		end
-
-    end
-end
-
-
-
--- functions --
-
+-- create object and appent it to the list
 function Camera:create_object(_shape, _position, _scale, _rotation)
     local obj={}
 
@@ -173,12 +176,12 @@ function Camera:create_object(_shape, _position, _scale, _rotation)
 end
 
 function Camera:update_engine()
-    for _,obj in ipairs(objects) do
+    for _,obj in ipairs(OBJECTS) do
         self:create_render_object(obj)
         self:rotate_shape(obj)
     end
 
-    self:drawing_order(objects)
+    self:drawing_order(OBJECTS)
     self:calculate_view_matrix()
 end
 
@@ -202,7 +205,7 @@ function Camera:create_render_object(_obj)
 end
 
 function Camera:drawing_order(_object)
-	for _,obj in ipairs(objects) do
+	for _,obj in ipairs(OBJECTS) do
 		local tri = obj.render_triangles
 		local _x,_y,_z = 0,0,0		
 		for i=1,#tri do
@@ -216,8 +219,15 @@ function Camera:drawing_order(_object)
 		obj.b = {_x,_y,_z}
 	end
 
-	objects = insertion_sort(objects)
+	OBJECTS = insertion_sort(OBJECTS)
 end
+
+-- backface culling
+-- negative area means the triangle is facing away from camera
+-- coincidentally also calculates area
+function Camera:shoelace_culling(x1,y1,x2,y2,x3,y3)
+    return (x1*y2-y1*x2)+(x2*y3-y2*x3)+(x3*y1-y3*x1) -- this is blowing my mind tbh
+end 
 
 -- sorts objects by distance to camera
 -- not a great way of doing it though

@@ -45,8 +45,6 @@ function love.update(dt)
     frm = frm+1
 
     game:update(fdt)
-
-    debug=love.timer.getFPS()
 end
 
 function love.draw()
